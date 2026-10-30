@@ -1,97 +1,72 @@
-# Movie Recommendation System
+# 🎬 CineMatch AI — Movie Recommendation System
 
-An interactive movie discovery and recommendation platform built with Python, Scikit-Learn, Plotly, and Streamlit.
-
----
-
-## 📌 Project Overview
-
-The **Movie Recommendation System** combines Natural Language Processing (TF-IDF vector space modeling) and IMDb Bayesian Weighted Rating formulations to provide instant, high-precision film recommendations across a catalog of 62,000+ movies and over 25,000,000 viewer ratings.
-
-The application allows users to discover movies similar to their favorites, explore top charts filtered by genre and era, generate customized preference-based watchlists, and analyze cinema trends.
+An intelligent, full-stack Movie Recommendation System featuring interactive content-based filtering, explainable AI (XAI) recommendations, a rich cinematic dark UI, and an online movie input studio.
 
 ---
 
-## ✨ Key Features
+## 🌟 Key Features
 
-- **Content-Based Movie Recommender**: Search or select any movie from thousands of titles to receive instant recommendations ranked by Cosine Similarity and Bayesian weighted rating.
-- **Top Charts & Genre Explorer**: Browse the top 50 all-time highest-rated movies with interactive multi-genre filters, decade filters, and minimum vote threshold controls.
-- **Personalized Watchlist Builder**: Tailor a custom watchlist based on preferred genres, release decades, and target minimum ratings.
-- **Cinema Analytics Dashboard**: Empirical analytics on genre distributions, rating frequency distributions, and popularity vs. quality scatter visualizations.
-- **Mathematical Transparency**: Detailed explanations and LaTeX formulas for the Bayesian Weighted Rating and TF-IDF similarity metrics.
+1. **Independent Local Server (Flask)**:
+   - Built on Flask + SQLite for fast, offline, local operation without Streamlit dependencies.
+   - RESTful API endpoints for filtering, searching, bookmarking, and generating recommendations.
 
----
+2. **Curated Modern & Online Releases**:
+   - Seeded with 40+ high-profile current blockbusters and cinema masterpieces (*Dune: Part Two*, *Oppenheimer*, *Spider-Man: Across the Spider-Verse*, *Deadpool & Wolverine*, *Gladiator II*, *Alien: Romulus*, *Interstellar*, *Inception*, *The Dark Knight*, etc.).
+   - Full rich movie metadata: HD poster art, backdrop banners, release years, runtimes, certifications, IMDb ratings, directing styles, and top cast ensembles.
 
-## 🧠 System Architecture & Mathematical Formulations
+3. **Online Movie Input Studio ("Add New Movie")**:
+   - Allows users to input new online movies directly via an interactive UI form.
+   - Automatically saves to SQLite and updates the TF-IDF recommendation index in real time.
+   - Includes 1-click preset templates for instant testing.
 
-### 1. IMDb Bayesian Weighted Rating ($WR$)
-To ensure movies with only a handful of 5-star reviews do not unfairly outrank acclaimed films with tens of thousands of reviews, we compute:
+4. **Interactive Cinematic Web Interface**:
+   - **Discover & Browse**: Filter by 14+ genres, eras (2020s, 2010s, 2000s, 1990s), IMDb rating slider, and live search.
+   - **AI Recommender Studio**: Recommend by seed movie or choose by mood (*Mind-Bending Sci-Fi*, *Adrenaline Rush*, *Feel-Good*, *Dark Crime*, *Epic Adventure*, *Heartfelt Drama*).
+   - **Movie Detail Modal with Video Trailer**: Backdrop banner, official YouTube trailer preview, full cast, synopsis, and "More Like This" carousel.
+   - **My Watchlist**: Save movies to personal favorites with real-time counters.
+   - **Platform Analytics**: Dynamic metrics on catalog breakdown, modern titles, and genre distribution.
 
-$$WR = \left(\frac{v}{v + m}\right) \cdot R + \left(\frac{m}{v + m}\right) \cdot C$$
-
-- $v$: Number of ratings for the movie (`vote_count`)
-- $m$: Minimum vote threshold for rating stability ($m = 100$)
-- $R$: Average community rating of the movie (`vote_average`)
-- $C$: Mean rating across the entire catalog ($C \approx 3.12$)
-
-### 2. TF-IDF & Cosine Similarity
-Film features (title tokens, double-weighted genre tags, and decade indicators) are converted into vector space embeddings using an 8,000-feature TF-IDF matrix. Similarity between movies $A$ and $B$ is determined via Cosine Similarity:
-
-$$\text{Cosine Similarity}(A, B) = \frac{A \cdot B}{\|A\|_2 \|B\|_2}$$
+5. **1-Click Launchers**:
+   - `run_movie_recommender.bat` automatically verifies SQLite, starts the server on port `5001`, and opens your web browser at `http://127.0.0.1:5001`.
 
 ---
 
-## 🚀 Getting Started
+## 🚀 How to Run
 
-### 1. Prerequisites
-- Python 3.9+ (tested on Python 3.11)
-- `pip` package manager
+### Option 1: 1-Click Batch Launcher (Recommended)
+Double click:
+```cmd
+run_movie_recommender.bat
+```
 
-### 2. Installation
-Clone the repository and install the dependencies:
+### Option 2: Command Line
 ```bash
-git clone <your-repository-url>
-cd Chetya
+# 1. Install dependencies
 pip install -r requirements.txt
-```
 
-### 3. Model Training (Optional)
-Precomputed and serialized models are included in `models/`. To retrain the recommendation index:
-```bash
-python train_model.py
+# 2. Run the application server
+python server.py
 ```
-
-### 4. Running the Application
-Launch the Streamlit web dashboard:
-```bash
-streamlit run app.py
-```
-The app will open automatically in your browser at `http://localhost:8501`.
+Open your browser at: **`http://127.0.0.1:5001`**
 
 ---
 
-## 🌐 Streamlit Cloud Deployment Guide
+## 📡 API Endpoints
 
-1. Push this directory (`Chetya/`) to a GitHub repository.
-2. Sign in to [Streamlit Community Cloud](https://share.streamlit.io/).
-3. Click **"New app"**.
-4. Select your repository, set the branch to `main`, and specify **Main file path** as `app.py`.
-5. Click **"Deploy!"**.
+- `GET /` — Main Interactive Cinematic Dashboard
+- `GET /api/movies` — Filtered catalog (search query, genre, era, rating, sort order)
+- `GET /api/movie/<id>` — Full movie details with trailer preview and similar titles
+- `GET /api/recommend` — Recommendation engine (by `movie_id`, `mood`, or `from_watchlist`)
+- `POST /api/movies/add` — Add a new online movie and trigger live re-indexing
+- `POST /api/watchlist/toggle` — Add/remove movie from watchlist
+- `GET /api/watchlist` — Get all saved movies
+- `GET /api/genres` — List of unique genres with title counts
+- `GET /api/stats` — Live statistics and metrics
 
 ---
 
-## 📁 Repository Structure
-
-```text
-├── app.py                      # Main interactive Streamlit application
-├── train_model.py              # Recommendation model training & indexing script
-├── requirements.txt            # Python dependencies for deployment
-├── README.md                   # Project documentation
-├── .gitignore                  # Git ignore rules
-├── movies.csv                  # MovieLens movies catalog
-├── movies_with_ratings.csv     # Enriched movies dataset with Bayesian ratings
-└── models/                     # Saved model artifacts
-    ├── movie_recommender.pkl   # Serialized TF-IDF vectorizer & sparse matrix
-    ├── movies_pool.csv         # Processed recommendation pool
-    └── metadata.json           # Catalog genres, decades, and statistics
-```
+## 🛠️ Tech Stack
+- **Backend**: Python 3, Flask, SQLite3
+- **Machine Learning**: Scikit-Learn (TF-IDF Vectorizer, Cosine Similarity, Bayesian Weighted Rating)
+- **Frontend**: HTML5, Vanilla JavaScript (ES6+), Modern Responsive CSS3 (Flexbox/Grid, Dark Cinematic Theme)
+- **Icons & Fonts**: FontAwesome 6, Google Fonts (*Plus Jakarta Sans*, *Space Grotesk*)

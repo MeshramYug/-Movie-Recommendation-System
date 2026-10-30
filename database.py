@@ -1,0 +1,785 @@
+"""
+Database Module for Movie Recommendation System
+Manages SQLite database with rich movie metadata, watchlist, and user ratings.
+Includes curated modern & current 2023-2024 online movies alongside cinema classics.
+"""
+
+import sqlite3
+import os
+import json
+from datetime import datetime
+
+DB_PATH = os.path.join(os.path.dirname(__file__), 'movies.db')
+
+def get_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_db():
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # Movies table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS movies (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            clean_title TEXT,
+            year INTEGER,
+            genres TEXT NOT NULL,
+            director TEXT,
+            cast TEXT,
+            overview TEXT,
+            vote_average REAL DEFAULT 7.0,
+            vote_count INTEGER DEFAULT 1000,
+            runtime INTEGER DEFAULT 120,
+            poster_url TEXT,
+            backdrop_url TEXT,
+            trailer_url TEXT,
+            certification TEXT DEFAULT 'PG-13',
+            tagline TEXT,
+            is_custom INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # Watchlist table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS watchlist (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            movie_id INTEGER UNIQUE,
+            added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (movie_id) REFERENCES movies(id) ON DELETE CASCADE
+        )
+    ''')
+
+    # User Ratings & Reviews table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS user_ratings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            movie_id INTEGER,
+            rating REAL NOT NULL,
+            review TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (movie_id) REFERENCES movies(id) ON DELETE CASCADE
+        )
+    ''')
+
+    conn.commit()
+
+    # Check if movies exist, if not seed initial curated modern database
+    cursor.execute('SELECT COUNT(*) FROM movies')
+    count = cursor.fetchone()[0]
+    if count == 0:
+        seed_movies(conn)
+
+    conn.close()
+
+def seed_movies(conn):
+    cursor = conn.cursor()
+    
+    # 40+ Curated high-profile modern (2022-2024), current online, and timeless landmark movies
+    curated = [
+        {
+            "title": "Dune: Part Two (2024)",
+            "clean_title": "Dune: Part Two",
+            "year": 2024,
+            "genres": "Sci-Fi, Adventure, Action, Drama",
+            "director": "Denis Villeneuve",
+            "cast": "Timothée Chalamet, Zendaya, Rebecca Ferguson, Javier Bardem, Austin Butler",
+            "overview": "Paul Atreides unites with Chani and the Fremen while seeking revenge against the conspirators who destroyed his family. Facing a choice between the love of his life and the fate of the known universe, he endeavors to prevent a terrible future only he can foresee.",
+            "vote_average": 8.6,
+            "vote_count": 485000,
+            "runtime": 166,
+            "poster_url": "https://image.tmdb.org/t/p/w500/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/xOMo8BRK7PfcJv9JCnx7s5hj0x2.jpg",
+            "trailer_url": "https://www.youtube.com/embed/Way9Dexny3w",
+            "certification": "PG-13",
+            "tagline": "Long live the fighters."
+        },
+        {
+            "title": "Oppenheimer (2023)",
+            "clean_title": "Oppenheimer",
+            "year": 2023,
+            "genres": "Biography, Drama, History, Thriller",
+            "director": "Christopher Nolan",
+            "cast": "Cillian Murphy, Emily Blunt, Matt Damon, Robert Downey Jr., Florence Pugh",
+            "overview": "The story of American scientist J. Robert Oppenheimer and his role in the development of the atomic bomb during World War II, examining the moral, political, and personal consequences of scientific ambition.",
+            "vote_average": 8.9,
+            "vote_count": 720000,
+            "runtime": 180,
+            "poster_url": "https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/fm6K9vYqq0nGg2Ta5Z60kXg3j5e.jpg",
+            "trailer_url": "https://www.youtube.com/embed/uYPbbksJxIg",
+            "certification": "R",
+            "tagline": "The world forever changes."
+        },
+        {
+            "title": "Spider-Man: Across the Spider-Verse (2023)",
+            "clean_title": "Spider-Man: Across the Spider-Verse",
+            "year": 2023,
+            "genres": "Animation, Action, Adventure, Sci-Fi",
+            "director": "Joaquim Dos Santos, Kemp Powers, Justin K. Thompson",
+            "cast": "Shameik Moore, Hailee Steinfeld, Oscar Isaac, Jake Johnson, Daniel Kaluuya",
+            "overview": "Miles Morales catapults across the Multiverse, where he encounters a team of Spider-People charged with protecting its very existence. When heroes clash on how to handle a new threat, Miles must redefine what it means to be a hero.",
+            "vote_average": 8.7,
+            "vote_count": 590000,
+            "runtime": 140,
+            "poster_url": "https://image.tmdb.org/t/p/w500/8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/4HodYYKEIsGOdinkGi2Ucz6X9i0.jpg",
+            "trailer_url": "https://www.youtube.com/embed/cqGjhVJWtEg",
+            "certification": "PG",
+            "tagline": "It's how you wear the mask that matters."
+        },
+        {
+            "title": "Deadpool & Wolverine (2024)",
+            "clean_title": "Deadpool & Wolverine",
+            "year": 2024,
+            "genres": "Action, Comedy, Sci-Fi, Adventure",
+            "director": "Shawn Levy",
+            "cast": "Ryan Reynolds, Hugh Jackman, Emma Corrin, Matthew Macfadyen, Dafne Keen",
+            "overview": "A listless Wade Wilson toils away in civilian life with his days as the morally flexible mercenary Deadpool behind him. But when his homeworld faces an existential threat, Wade must reluctantly suit up again with an even more reluctant Wolverine.",
+            "vote_average": 7.9,
+            "vote_count": 410000,
+            "runtime": 128,
+            "poster_url": "https://image.tmdb.org/t/p/w500/8cdWjvZQUExUUTzyp4t6EDMubfO.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/yDHYTfA3R0jFYba16jBB1ef8oIt.jpg",
+            "trailer_url": "https://www.youtube.com/embed/73_1biulkYk",
+            "certification": "R",
+            "tagline": "Come together."
+        },
+        {
+            "title": "Interstellar (2014)",
+            "clean_title": "Interstellar",
+            "year": 2014,
+            "genres": "Sci-Fi, Drama, Adventure",
+            "director": "Christopher Nolan",
+            "cast": "Matthew McConaughey, Anne Hathaway, Jessica Chastain, Michael Caine, Matt Damon",
+            "overview": "When Earth becomes uninhabitable in the future, a farmer and ex-NASA pilot, Joseph Cooper, is tasked to pilot a spacecraft, along with a team of researchers, to find a new planet for humans through a newly discovered wormhole.",
+            "vote_average": 8.7,
+            "vote_count": 1950000,
+            "runtime": 169,
+            "poster_url": "https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/xJHokMbljvjADYdit5fK5VQsXEG.jpg",
+            "trailer_url": "https://www.youtube.com/embed/zSWdZVtXT7E",
+            "certification": "PG-13",
+            "tagline": "Mankind was born on Earth. It was never meant to die here."
+        },
+        {
+            "title": "Inception (2010)",
+            "clean_title": "Inception",
+            "year": 2010,
+            "genres": "Action, Sci-Fi, Thriller, Adventure",
+            "director": "Christopher Nolan",
+            "cast": "Leonardo DiCaprio, Joseph Gordon-Levitt, Elliot Page, Tom Hardy, Ken Watanabe",
+            "overview": "A thief who steals corporate secrets through the use of dream-sharing technology is given the inverse task of planting an idea into the mind of a C.E.O., but his tragic past may doom the project and his team to disaster.",
+            "vote_average": 8.8,
+            "vote_count": 2400000,
+            "runtime": 148,
+            "poster_url": "https://image.tmdb.org/t/p/w500/oYuLEt3zVCKq57qu2F8dT7NIa6f.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/s3TBrRGB1iav7gFOCNx3H31MoES.jpg",
+            "trailer_url": "https://www.youtube.com/embed/YoHD9XEInc0",
+            "certification": "PG-13",
+            "tagline": "Your mind is the scene of the crime."
+        },
+        {
+            "title": "The Dark Knight (2008)",
+            "clean_title": "The Dark Knight",
+            "year": 2008,
+            "genres": "Action, Crime, Drama, Thriller",
+            "director": "Christopher Nolan",
+            "cast": "Christian Bale, Heath Ledger, Aaron Eckhart, Michael Caine, Maggie Gyllenhaal",
+            "overview": "When the menace known as the Joker wreaks havoc and chaos on the people of Gotham, Batman must accept one of the greatest psychological and physical tests of his ability to fight injustice.",
+            "vote_average": 9.0,
+            "vote_count": 2700000,
+            "runtime": 152,
+            "poster_url": "https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/dqK9Hag1054tghRQSqLSfrkvQnA.jpg",
+            "trailer_url": "https://www.youtube.com/embed/EXeTwQWrcwY",
+            "certification": "PG-13",
+            "tagline": "Welcome to a world without rules."
+        },
+        {
+            "title": "The Batman (2022)",
+            "clean_title": "The Batman",
+            "year": 2022,
+            "genres": "Action, Crime, Drama, Mystery",
+            "director": "Matt Reeves",
+            "cast": "Robert Pattinson, Zoë Kravitz, Paul Dano, Jeffrey Wright, Colin Farrell",
+            "overview": "When a sadistic serial killer begins murdering key political figures in Gotham, the Batman is forced to investigate the city's hidden corruption and question his family's involvement.",
+            "vote_average": 7.8,
+            "vote_count": 820000,
+            "runtime": 176,
+            "poster_url": "https://image.tmdb.org/t/p/w500/74xTEgt7R36Fpooo50r9T25onhq.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/b0PlSFdDwbyK0cf5RxwDpaOJQvQ.jpg",
+            "trailer_url": "https://www.youtube.com/embed/mqqft2x_Aa4",
+            "certification": "PG-13",
+            "tagline": "Unmask the truth."
+        },
+        {
+            "title": "Dune (2021)",
+            "clean_title": "Dune",
+            "year": 2021,
+            "genres": "Sci-Fi, Adventure, Action, Drama",
+            "director": "Denis Villeneuve",
+            "cast": "Timothée Chalamet, Rebecca Ferguson, Oscar Isaac, Josh Brolin, Stellan Skarsgård",
+            "overview": "A noble family becomes embroiled in a war for control over the galaxy's most valuable asset while its heir becomes troubled by visions of a dark future.",
+            "vote_average": 8.0,
+            "vote_count": 910000,
+            "runtime": 155,
+            "poster_url": "https://image.tmdb.org/t/p/w500/d5NXSklXo0qyIYkgV94XAgMIckC.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/lzWHmYZrWnFhczrF848q99MWFi.jpg",
+            "trailer_url": "https://www.youtube.com/embed/8g18jFHCLXk",
+            "certification": "PG-13",
+            "tagline": "Beyond fear, destiny awaits."
+        },
+        {
+            "title": "Top Gun: Maverick (2022)",
+            "clean_title": "Top Gun: Maverick",
+            "year": 2022,
+            "genres": "Action, Drama",
+            "director": "Joseph Kosinski",
+            "cast": "Tom Cruise, Miles Teller, Jennifer Connelly, Jon Hamm, Glen Powell",
+            "overview": "After thirty years, Maverick is still pushing the envelope as a top naval aviator, but must confront ghosts of his past when he leads TOP GUN's elite graduates on a mission that demands the ultimate sacrifice from those chosen to fly it.",
+            "vote_average": 8.3,
+            "vote_count": 680000,
+            "runtime": 130,
+            "poster_url": "https://image.tmdb.org/t/p/w500/62HCnUTziyWcpDaBO2i1DX17ljH.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/AaV1YIdWKnjAiaOe0UUKNJm922h.jpg",
+            "trailer_url": "https://www.youtube.com/embed/giXco2jaZ_4",
+            "certification": "PG-13",
+            "tagline": "Feel the need."
+        },
+        {
+            "title": "Barbie (2023)",
+            "clean_title": "Barbie",
+            "year": 2023,
+            "genres": "Comedy, Adventure, Fantasy",
+            "director": "Greta Gerwig",
+            "cast": "Margot Robbie, Ryan Reynolds, America Ferrera, Kate McKinnon, Will Ferrell",
+            "overview": "To live in Barbie Land is to be a perfect being in a perfect place. Unless you have a full-on existential crisis. Or you're a Ken.",
+            "vote_average": 7.3,
+            "vote_count": 620000,
+            "runtime": 114,
+            "poster_url": "https://image.tmdb.org/t/p/w500/iuFNMS8U5cb6xfzi51Dbkovj7vM.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/nHf61UzkfFno5X1ofIhugCPus2R.jpg",
+            "trailer_url": "https://www.youtube.com/embed/pBk4NYhWNMM",
+            "certification": "PG-13",
+            "tagline": "She's everything. He's just Ken."
+        },
+        {
+            "title": "Everything Everywhere All at Once (2022)",
+            "clean_title": "Everything Everywhere All at Once",
+            "year": 2022,
+            "genres": "Action, Adventure, Comedy, Sci-Fi",
+            "director": "Daniel Kwan, Daniel Scheinert",
+            "cast": "Michelle Yeoh, Stephanie Hsu, Ke Huy Quan, Jamie Lee Curtis, James Hong",
+            "overview": "A middle-aged Chinese immigrant is swept up into an insane adventure in which she alone can save existence by exploring other universes and connecting with the lives she could have led.",
+            "vote_average": 8.1,
+            "vote_count": 540000,
+            "runtime": 139,
+            "poster_url": "https://image.tmdb.org/t/p/w500/w3LxiVYPqrlxqPYS20Qva9q0ZUm.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/70AV2Xx5FQYj20tlMvm89T06i8W.jpg",
+            "trailer_url": "https://www.youtube.com/embed/wxN1T1uxQ2g",
+            "certification": "R",
+            "tagline": "The universe is so much bigger than you realize."
+        },
+        {
+            "title": "Blade Runner 2049 (2017)",
+            "clean_title": "Blade Runner 2049",
+            "year": 2017,
+            "genres": "Sci-Fi, Mystery, Drama, Thriller",
+            "director": "Denis Villeneuve",
+            "cast": "Ryan Gosling, Harrison Ford, Ana de Armas, Sylvia Hoeks, Robin Wright",
+            "overview": "Young Blade Runner K's discovery of a long-buried secret leads him to track down former Blade Runner Rick Deckard, who's been missing for thirty years.",
+            "vote_average": 8.0,
+            "vote_count": 620000,
+            "runtime": 164,
+            "poster_url": "https://image.tmdb.org/t/p/w500/gajva2L0rPYkEWjzgFlBXCAVBE5.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/eA27g7uYn26W8X6t3K9Y56m12c.jpg",
+            "trailer_url": "https://www.youtube.com/embed/gCcx85zbxz4",
+            "certification": "R",
+            "tagline": "There's still a page left."
+        },
+        {
+            "title": "Furiosa: A Mad Max Saga (2024)",
+            "clean_title": "Furiosa: A Mad Max Saga",
+            "year": 2024,
+            "genres": "Action, Adventure, Sci-Fi, Thriller",
+            "director": "George Miller",
+            "cast": "Anya Taylor-Joy, Chris Hemsworth, Tom Burke, Alyla Browne, Lachy Hulme",
+            "overview": "As the world fell, young Furiosa is snatched from the Green Place of Many Mothers and falls into the hands of a great Biker Horde led by the Warlord Dementus. Sweeping through the Wasteland, they come across the Citadel presided over by The Immortan Joe.",
+            "vote_average": 7.6,
+            "vote_count": 210000,
+            "runtime": 148,
+            "poster_url": "https://image.tmdb.org/t/p/w500/iADOJ8Zymht2JPMoy3R7xUMZ51f.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/wNAhuOZ3Zf84jCI5TeTVrwUm4Fs.jpg",
+            "trailer_url": "https://www.youtube.com/embed/XJMuhwVlca4",
+            "certification": "R",
+            "tagline": "Out of the darkness, she will ignite."
+        },
+        {
+            "title": "Alien: Romulus (2024)",
+            "clean_title": "Alien: Romulus",
+            "year": 2024,
+            "genres": "Horror, Sci-Fi, Thriller",
+            "director": "Fede Álvarez",
+            "cast": "Cailee Spaeny, David Jonsson, Archie Renaux, Isabela Merced, Spike Fearn",
+            "overview": "While scavenging the deep ends of a derelict space station, a group of young space colonists come face to face with the most terrifying life form in the universe.",
+            "vote_average": 7.3,
+            "vote_count": 185000,
+            "runtime": 119,
+            "poster_url": "https://image.tmdb.org/t/p/w500/b33nnKl1GSFbao8l3Ki8qMMq06h.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/9SSEUrSqhljBMzRe4aBTh17rUaC.jpg",
+            "trailer_url": "https://www.youtube.com/embed/x0XDEhP4MQs",
+            "certification": "R",
+            "tagline": "In space, no one can hear you."
+        },
+        {
+            "title": "Gladiator II (2024)",
+            "clean_title": "Gladiator II",
+            "year": 2024,
+            "genres": "Action, Adventure, Drama, History",
+            "director": "Ridley Scott",
+            "cast": "Paul Mescal, Pedro Pascal, Denzel Washington, Connie Nielsen, Joseph Quinn",
+            "overview": "Years after witnessing the death of Maximus at the hands of his uncle, Lucius must enter the Colosseum after the powerful emperors of Rome conquer his home. With rage in his heart and the future of the empire at stake, he looks to the past to find the strength and honor to return the glory of Rome to its people.",
+            "vote_average": 7.8,
+            "vote_count": 160000,
+            "runtime": 148,
+            "poster_url": "https://image.tmdb.org/t/p/w500/2cxhvwyEwRlysAmRH4iodkvo0z5.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/euYIwmwkmz95mnExlogQIJuEGqh.jpg",
+            "trailer_url": "https://www.youtube.com/embed/4rgYUipGJNo",
+            "certification": "R",
+            "tagline": "Prepare to be entertained."
+        },
+        {
+            "title": "Inside Out 2 (2024)",
+            "clean_title": "Inside Out 2",
+            "year": 2024,
+            "genres": "Animation, Adventure, Comedy, Family",
+            "director": "Kelsey Mann",
+            "cast": "Amy Poehler, Maya Hawke, Kensington Tallman, Liza Lapira, Tony Hale",
+            "overview": "Joy, Sadness, Anger, Fear and Disgust have been running a successful operation by all accounts. However, when Anxiety, Envy, Ennui and Embarrassment show up, headquarters undergoes a sudden demolition to make room for unexpected new emotions.",
+            "vote_average": 7.6,
+            "vote_count": 420000,
+            "runtime": 96,
+            "poster_url": "https://image.tmdb.org/t/p/w500/vpnVM9B6NMmQpWeZvzLvDESb2QY.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/xg270vgDCu42WZWvtHqOzZtQO3t.jpg",
+            "trailer_url": "https://www.youtube.com/embed/LEjhY15eCx0",
+            "certification": "PG",
+            "tagline": "Make room for new emotions."
+        },
+        {
+            "title": "Challengers (2024)",
+            "clean_title": "Challengers",
+            "year": 2024,
+            "genres": "Drama, Romance, Sport",
+            "director": "Luca Guadagnino",
+            "cast": "Zendaya, Josh O'Connor, Mike Faist, Darnell Appling, Nada Despotovich",
+            "overview": "Tashi, a former tennis prodigy turned coach, transformed her husband into a grand slam champion. To jolt him out of a losing streak, she enters him into a challenger event where he faces off against his former best friend and Tashi's ex-boyfriend.",
+            "vote_average": 7.2,
+            "vote_count": 195000,
+            "runtime": 131,
+            "poster_url": "https://image.tmdb.org/t/p/w500/H6vke73q32op0PXDFAwGF4Te6.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/ga4OLm4qLxO1lrk0e7m9m8j2xV.jpg",
+            "trailer_url": "https://www.youtube.com/embed/VobTTbg-te0",
+            "certification": "R",
+            "tagline": "Her game. Her rules."
+        },
+        {
+            "title": "Poor Things (2023)",
+            "clean_title": "Poor Things",
+            "year": 2023,
+            "genres": "Comedy, Drama, Romance, Sci-Fi",
+            "director": "Yorgos Lanthimos",
+            "cast": "Emma Stone, Mark Ruffalo, Willem Dafoe, Ramy Youssef, Christopher Abbott",
+            "overview": "The incredible tale about the fantastical evolution of Bella Baxter, a young woman brought back to life by the brilliant and unorthodox scientist Dr. Godwin Baxter.",
+            "vote_average": 7.9,
+            "vote_count": 310000,
+            "runtime": 141,
+            "poster_url": "https://image.tmdb.org/t/p/w500/kCGlIMHnOm8JPXq3rXM6c5wMxcT.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/bQS43HSLZzMjZkcHJz4fS9GmgCb.jpg",
+            "trailer_url": "https://www.youtube.com/embed/RlbR5N6veqw",
+            "certification": "R",
+            "tagline": "She's like nothing you've ever seen."
+        },
+        {
+            "title": "Killers of the Flower Moon (2023)",
+            "clean_title": "Killers of the Flower Moon",
+            "year": 2023,
+            "genres": "Crime, Drama, History, Western",
+            "director": "Martin Scorsese",
+            "cast": "Leonardo DiCaprio, Robert De Niro, Lily Gladstone, Jesse Plemons, Tantoo Cardinal",
+            "overview": "When oil is discovered in 1920s Oklahoma under Osage Nation land, the Osage people are murdered one by one—until the FBI steps in to unravel the mystery.",
+            "vote_average": 7.6,
+            "vote_count": 270000,
+            "runtime": 206,
+            "poster_url": "https://image.tmdb.org/t/p/w500/dB6Krk806zeqd095MA9NTQIUZzR.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/1X7vZhApQ2r0h1hA0aG9c7h8M4d.jpg",
+            "trailer_url": "https://www.youtube.com/embed/EP34Yoxs3FQ",
+            "certification": "R",
+            "tagline": "An extraordinary true story."
+        },
+        {
+            "title": "The Shawshank Redemption (1994)",
+            "clean_title": "The Shawshank Redemption",
+            "year": 1994,
+            "genres": "Drama, Crime",
+            "director": "Frank Darabont",
+            "cast": "Tim Robbins, Morgan Freeman, Bob Gunton, William Sadler, Clancy Brown",
+            "overview": "Chronicles the experiences of a formerly successful banker as a prisoner in the gloomy jailhouse of Shawshank after being found guilty of a crime he did not commit. The film portrays the man's unique way of dealing with his new, torturous life; along the way he befriends a number of fellow prisoners, most notably a wise long-term inmate named Red.",
+            "vote_average": 9.3,
+            "vote_count": 2800000,
+            "runtime": 142,
+            "poster_url": "https://image.tmdb.org/t/p/w500/9cqNxx0GxF0bflZmeSMuL5tnGzr.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/kXfqcdQKsToO0OUXHcrrNCHDBzO.jpg",
+            "trailer_url": "https://www.youtube.com/embed/PLl99DlL6b4",
+            "certification": "R",
+            "tagline": "Fear can hold you prisoner. Hope can set you free."
+        },
+        {
+            "title": "Pulp Fiction (1994)",
+            "clean_title": "Pulp Fiction",
+            "year": 1994,
+            "genres": "Crime, Drama, Thriller",
+            "director": "Quentin Tarantino",
+            "cast": "John Travolta, Samuel L. Jackson, Uma Thurman, Bruce Willis, Ving Rhames",
+            "overview": "A burger-loving hit man, his philosophical partner, a drug-addled gangster's moll and a washed-up boxer converge in this sprawling, comedic crime caper. Their adventures unfurl in three stories that ingeniously trip back and forth in time.",
+            "vote_average": 8.9,
+            "vote_count": 2100000,
+            "runtime": 154,
+            "poster_url": "https://image.tmdb.org/t/p/w500/d5iIlFn5s0ImszYzBPb8JPIfbXD.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/suaEOtk1N1sgg2MTM7oZd2cfVp3.jpg",
+            "trailer_url": "https://www.youtube.com/embed/s7EdQ4FqbhY",
+            "certification": "R",
+            "tagline": "Just because you are a character doesn't mean you have character."
+        },
+        {
+            "title": "Parasite (2019)",
+            "clean_title": "Parasite",
+            "year": 2019,
+            "genres": "Drama, Thriller, Comedy",
+            "director": "Bong Joon-ho",
+            "cast": "Song Kang-ho, Lee Sun-kyun, Cho Yeo-jeong, Choi Woo-shik, Park So-dam",
+            "overview": "All unemployed, Ki-taek's family takes peculiar interest in the wealthy and glamorous Parks for their livelihood until they get entangled in an unexpected incident.",
+            "vote_average": 8.5,
+            "vote_count": 920000,
+            "runtime": 132,
+            "poster_url": "https://image.tmdb.org/t/p/w500/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/hiKmpZMGZsrkA3cdce8a7Dpos1j.jpg",
+            "trailer_url": "https://www.youtube.com/embed/5xH0RZE728M",
+            "certification": "R",
+            "tagline": "Act like you own the place."
+        },
+        {
+            "title": "Spirited Away (2001)",
+            "clean_title": "Spirited Away",
+            "year": 2001,
+            "genres": "Animation, Adventure, Fantasy, Family",
+            "director": "Hayao Miyazaki",
+            "cast": "Rumi Hiiragi, Miyu Irino, Mari Natsuki, Takashi Naito, Yasuko Sawaguchi",
+            "overview": "During her family's move to the suburbs, a sullen 10-year-old girl wanders into a world ruled by gods, witches, and spirits, a world where humans are changed into beasts.",
+            "vote_average": 8.6,
+            "vote_count": 830000,
+            "runtime": 125,
+            "poster_url": "https://image.tmdb.org/t/p/w500/393r7wB5c4UvH147PqgXhX2UqRk.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/Ab8mkHmkYADjU7wQiOkia9BzGvS.jpg",
+            "trailer_url": "https://www.youtube.com/embed/ByXuk9QqQkk",
+            "certification": "PG",
+            "tagline": "Tunnel into a miraculous realm."
+        },
+        {
+            "title": "Whiplash (2014)",
+            "clean_title": "Whiplash",
+            "year": 2014,
+            "genres": "Drama, Music",
+            "director": "Damien Chazelle",
+            "cast": "Miles Teller, J.K. Simmons, Paul Reiser, Melissa Benoist, Austin Stowell",
+            "overview": "Under the direction of a ruthless instructor, a talented young drummer begins to pursue perfection at any cost, pushing himself to the brink of sanity.",
+            "vote_average": 8.5,
+            "vote_count": 950000,
+            "runtime": 107,
+            "poster_url": "https://image.tmdb.org/t/p/w500/7fn624j5lj3xTme2SgiLCeuedmO.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/6bbZ6X7e1eB013v1v39XyR3M5h.jpg",
+            "trailer_url": "https://www.youtube.com/embed/7d_jQycdQGo",
+            "certification": "R",
+            "tagline": "The road to greatness can take you to the edge."
+        },
+        {
+            "title": "Avengers: Endgame (2019)",
+            "clean_title": "Avengers: Endgame",
+            "year": 2019,
+            "genres": "Action, Adventure, Sci-Fi, Drama",
+            "director": "Anthony Russo, Joe Russo",
+            "cast": "Robert Downey Jr., Chris Evans, Mark Ruffalo, Chris Hemsworth, Scarlett Johansson",
+            "overview": "After the devastating events of Infinity War, the universe is in ruins. With the help of remaining allies, the Avengers assemble once more in order to reverse Thanos' actions and restore balance to the universe.",
+            "vote_average": 8.4,
+            "vote_count": 1240000,
+            "runtime": 181,
+            "poster_url": "https://image.tmdb.org/t/p/w500/or06FN3Dka5tukK1e9sl16pB3iy.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/7RyHsO4yDXtBv1zUU3mTpHeQ0d5.jpg",
+            "trailer_url": "https://www.youtube.com/embed/TcMBFSGVi1c",
+            "certification": "PG-13",
+            "tagline": "Part of the journey is the end."
+        },
+        {
+            "title": "John Wick: Chapter 4 (2023)",
+            "clean_title": "John Wick: Chapter 4",
+            "year": 2023,
+            "genres": "Action, Thriller, Crime",
+            "director": "Chad Stahelski",
+            "cast": "Keanu Reeves, Donnie Yen, Bill Skarsgård, Laurence Fishburne, Hiroyuki Sanada",
+            "overview": "With the price on his head ever increasing, John Wick uncovers a path to defeating The High Table. But before he can earn his freedom, Wick must face off against a new enemy with powerful alliances across the globe and forces that turn old friends into foes.",
+            "vote_average": 7.7,
+            "vote_count": 420000,
+            "runtime": 169,
+            "poster_url": "https://image.tmdb.org/t/p/w500/vZloFAK7NmvMGKE7VkF5UHaz0I.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/h8gHn0OzBoaefW0w1GEvdY3n5W9.jpg",
+            "trailer_url": "https://www.youtube.com/embed/qEVUtrk8_B4",
+            "certification": "R",
+            "tagline": "No way out, only one way through."
+        },
+        {
+            "title": "Spider-Man: No Way Home (2021)",
+            "clean_title": "Spider-Man: No Way Home",
+            "year": 2021,
+            "genres": "Action, Adventure, Sci-Fi, Fantasy",
+            "director": "Jon Watts",
+            "cast": "Tom Holland, Zendaya, Benedict Cumberbatch, Jacob Batalon, Jon Favreau",
+            "overview": "With Spider-Man's identity now revealed, Peter asks Doctor Strange for help. When a spell goes wrong, dangerous foes from other worlds start to appear, forcing Peter to discover what it truly means to be Spider-Man.",
+            "vote_average": 8.2,
+            "vote_count": 1100000,
+            "runtime": 148,
+            "poster_url": "https://image.tmdb.org/t/p/w500/1g0dhYtq4irTY1GPXvft6k4YLjm.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/14QbnygCuTO0vl7bZ2P4YdsmnYc.jpg",
+            "trailer_url": "https://www.youtube.com/embed/JfVOs4VSpmA",
+            "certification": "PG-13",
+            "tagline": "The multiverse unleashed."
+        },
+        {
+            "title": "The Matrix (1999)",
+            "clean_title": "The Matrix",
+            "year": 1999,
+            "genres": "Action, Sci-Fi",
+            "director": "Lana Wachowski, Lilly Wachowski",
+            "cast": "Keanu Reeves, Laurence Fishburne, Carrie-Anne Moss, Hugo Weaving, Joe Pantoliano",
+            "overview": "Set in the 22nd century, The Matrix tells the story of a computer hacker who joins a group of underground insurgents fighting the vast and powerful computers who now rule the earth with a simulated reality.",
+            "vote_average": 8.7,
+            "vote_count": 2050000,
+            "runtime": 136,
+            "poster_url": "https://image.tmdb.org/t/p/w500/f89U3ADr1oiB1s9GkdPOEpXUk5H.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/7u3fh9Am1QIyR1t5wZ9jK5k13V8.jpg",
+            "trailer_url": "https://www.youtube.com/embed/vKQi3bBA1y8",
+            "certification": "R",
+            "tagline": "Welcome to the Real World."
+        },
+        {
+            "title": "Fight Club (1999)",
+            "clean_title": "Fight Club",
+            "year": 1999,
+            "genres": "Drama, Thriller",
+            "director": "David Fincher",
+            "cast": "Brad Pitt, Edward Norton, Helena Bonham Carter, Meat Loaf, Jared Leto",
+            "overview": "An insomniac office worker looking for a way to change his life crosses paths with a devil-may-care soap maker and they form an underground fight club that evolves into something much more.",
+            "vote_average": 8.8,
+            "vote_count": 2300000,
+            "runtime": 139,
+            "poster_url": "https://image.tmdb.org/t/p/w500/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/rr7E0NoGKxvbSuHQPkxBohXdEj7.jpg",
+            "trailer_url": "https://www.youtube.com/embed/qtRKDV93gk8",
+            "certification": "R",
+            "tagline": "Mischief. Mayhem. Soap."
+        },
+        {
+            "title": "La La Land (2016)",
+            "clean_title": "La La Land",
+            "year": 2016,
+            "genres": "Comedy, Drama, Music, Romance",
+            "director": "Damien Chazelle",
+            "cast": "Ryan Gosling, Emma Stone, John Legend, Rosemarie DeWitt, J.K. Simmons",
+            "overview": "While navigating their careers in Los Angeles, a pianist and an actress fall in love while attempting to reconcile their aspirations for the future.",
+            "vote_average": 8.0,
+            "vote_count": 640000,
+            "runtime": 128,
+            "poster_url": "https://image.tmdb.org/t/p/w500/uDO8zWDhfWwoFdKS4fzkVJt0Rf0.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/qJeU795b9n2Z892N2m94J2Q282x.jpg",
+            "trailer_url": "https://www.youtube.com/embed/0pdqf4P9MB8",
+            "certification": "PG-13",
+            "tagline": "Here's to the fools who dream."
+        },
+        {
+            "title": "Get Out (2017)",
+            "clean_title": "Get Out",
+            "year": 2017,
+            "genres": "Horror, Mystery, Thriller",
+            "director": "Jordan Peele",
+            "cast": "Daniel Kaluuya, Allison Williams, Bradley Whitford, Catherine Keener, Caleb Landry Jones",
+            "overview": "A young African-American visits his white girlfriend's parents for the weekend, where his simmering uneasiness about their reception of him eventually reaches a boiling point.",
+            "vote_average": 7.8,
+            "vote_count": 710000,
+            "runtime": 104,
+            "poster_url": "https://image.tmdb.org/t/p/w500/tFXcEccSQMf3lfhfXKSU9iRBpa3.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/mDehB217cK8295b9n2Z892N2m94.jpg",
+            "trailer_url": "https://www.youtube.com/embed/DzfpyUB60YY",
+            "certification": "R",
+            "tagline": "Just because you're invited, doesn't mean you're welcome."
+        },
+        {
+            "title": "Mad Max: Fury Road (2015)",
+            "clean_title": "Mad Max: Fury Road",
+            "year": 2015,
+            "genres": "Action, Adventure, Sci-Fi, Thriller",
+            "director": "George Miller",
+            "cast": "Tom Hardy, Charlize Theron, Nicholas Hoult, Hugh Keays-Byrne, Josh Helman",
+            "overview": "In a post-apocalyptic wasteland, a woman rebels against a tyrannical ruler in search for her homeland with the aid of a group of female prisoners, a psychotic worshiper and a drifter named Max.",
+            "vote_average": 8.1,
+            "vote_count": 1100000,
+            "runtime": 120,
+            "poster_url": "https://image.tmdb.org/t/p/w500/8tZYtuWezp8JbcsvHYO0O46tFbo.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/nlCHUWda9Apm86zpk5929x7v.jpg",
+            "trailer_url": "https://www.youtube.com/embed/hEJnMQG930g",
+            "certification": "R",
+            "tagline": "What a lovely day."
+        },
+        {
+            "title": "Arrival (2016)",
+            "clean_title": "Arrival",
+            "year": 2016,
+            "genres": "Drama, Mystery, Sci-Fi",
+            "director": "Denis Villeneuve",
+            "cast": "Amy Adams, Jeremy Renner, Forest Whitaker, Michael Stuhlbarg, Mark O'Brien",
+            "overview": "Taking place after alien crafts land around the world, an expert linguist is recruited by the military to determine whether they come in peace or are a threat.",
+            "vote_average": 7.9,
+            "vote_count": 730000,
+            "runtime": 116,
+            "poster_url": "https://image.tmdb.org/t/p/w500/x2FJsf1ElAgr63Y3PNPtJrcmpoe.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/a91e5N3m9n2Z892N2m94J2Q282x.jpg",
+            "trailer_url": "https://www.youtube.com/embed/tFMo3UJ4B4g",
+            "certification": "PG-13",
+            "tagline": "Why are they here?"
+        },
+        {
+            "title": "Django Unchained (2012)",
+            "clean_title": "Django Unchained",
+            "year": 2012,
+            "genres": "Drama, Western, Action",
+            "director": "Quentin Tarantino",
+            "cast": "Jamie Foxx, Christoph Waltz, Leonardo DiCaprio, Kerry Washington, Samuel L. Jackson",
+            "overview": "With the help of a German bounty-hunter, a freed slave sets out to rescue his wife from a brutal Mississippi plantation owner.",
+            "vote_average": 8.5,
+            "vote_count": 1650000,
+            "runtime": 165,
+            "poster_url": "https://image.tmdb.org/t/p/w500/7oWY8vdWW7thTzN34Dyq70q9Q0q.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/2dae5M17cK8295b9n2Z892N2m94.jpg",
+            "trailer_url": "https://www.youtube.com/embed/0fUCuvNlOCg",
+            "certification": "R",
+            "tagline": "Life, liberty and the pursuit of vengeance."
+        },
+        {
+            "title": "The Prestige (2006)",
+            "clean_title": "The Prestige",
+            "year": 2006,
+            "genres": "Drama, Mystery, Sci-Fi, Thriller",
+            "director": "Christopher Nolan",
+            "cast": "Hugh Jackman, Christian Bale, Michael Caine, Scarlett Johansson, David Bowie",
+            "overview": "After a tragic accident, two stage magicians in 1890s London engage in a battle to create the ultimate illusion while sacrificing everything they have to outwit each other.",
+            "vote_average": 8.5,
+            "vote_count": 1400000,
+            "runtime": 130,
+            "poster_url": "https://image.tmdb.org/t/p/w500/bdN3gXu4IuOxhHgZhyE64OCiG4Z.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/bQ43HSLZzMjZkcHJz4fS9GmgCb.jpg",
+            "trailer_url": "https://www.youtube.com/embed/o4gHCmTQDVI",
+            "certification": "PG-13",
+            "tagline": "Are you watching closely?"
+        },
+        {
+            "title": "Coco (2017)",
+            "clean_title": "Coco",
+            "year": 2017,
+            "genres": "Animation, Adventure, Comedy, Family, Fantasy, Music",
+            "director": "Lee Unkrich, Adrian Molina",
+            "cast": "Anthony Gonzalez, Gael García Bernal, Benjamin Bratt, Alanna Ubach, Renée Victor",
+            "overview": "Aspiring musician Miguel, confronted with his family's ancestral ban on music, enters the Land of the Dead to find his great-great-grandfather, a legendary singer.",
+            "vote_average": 8.4,
+            "vote_count": 580000,
+            "runtime": 105,
+            "poster_url": "https://image.tmdb.org/t/p/w500/gGEsBPAijhVUFoiNpgZXqRVWJt2.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/askg3SMvhqEl4OL52YuvdtQwms8.jpg",
+            "trailer_url": "https://www.youtube.com/embed/Rvr68u6k5sI",
+            "certification": "PG",
+            "tagline": "The celebration of a lifetime."
+        },
+        {
+            "title": "Goodfellas (1990)",
+            "clean_title": "Goodfellas",
+            "year": 1990,
+            "genres": "Biography, Crime, Drama",
+            "director": "Martin Scorsese",
+            "cast": "Robert De Niro, Ray Liotta, Joe Pesci, Lorraine Bracco, Paul Sorvino",
+            "overview": "The story of Henry Hill and his life in the mafia, covering his relationship with his wife Karen and his mob partners Jimmy Conway and Tommy DeVito.",
+            "vote_average": 8.7,
+            "vote_count": 1250000,
+            "runtime": 145,
+            "poster_url": "https://image.tmdb.org/t/p/w500/aKuFiU82s5ISJpGZp7YkIr3kCUd.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/sw7mordbZxgITU877yTpZCud90M.jpg",
+            "trailer_url": "https://www.youtube.com/embed/qo5jJpHtTx8",
+            "certification": "R",
+            "tagline": "Three decades of life in the mafia."
+        },
+        {
+            "title": "Shutter Island (2010)",
+            "clean_title": "Shutter Island",
+            "year": 2010,
+            "genres": "Mystery, Thriller, Drama",
+            "director": "Martin Scorsese",
+            "cast": "Leonardo DiCaprio, Mark Ruffalo, Ben Kingsley, Max von Sydow, Michelle Williams",
+            "overview": "In 1954, a U.S. Marshal investigates the disappearance of a murderer who escaped from a hospital for the criminally insane on Boston Harbor's desolate Shutter Island.",
+            "vote_average": 8.2,
+            "vote_count": 1450000,
+            "runtime": 138,
+            "poster_url": "https://image.tmdb.org/t/p/w500/4GDy0PHYX3VRXUtwK5ysyteJm2V.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/c8vdU2G4a68295b9n2Z892N2m94.jpg",
+            "trailer_url": "https://www.youtube.com/embed/5iaYLCiq5RM",
+            "certification": "R",
+            "tagline": "Someone is missing."
+        },
+        {
+            "title": "Joker (2019)",
+            "clean_title": "Joker",
+            "year": 2019,
+            "genres": "Crime, Drama, Thriller",
+            "director": "Todd Phillips",
+            "cast": "Joaquin Phoenix, Robert De Niro, Zazie Beetz, Frances Conroy, Brett Cullen",
+            "overview": "During the 1980s, a failed stand-up comedian is driven insane and turns to a life of crime and chaos in Gotham City while becoming an infamous psychopathic crime figure.",
+            "vote_average": 8.4,
+            "vote_count": 1500000,
+            "runtime": 122,
+            "poster_url": "https://image.tmdb.org/t/p/w500/udDclJoHjfjb8Ekgsd4FDteOkCU.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/n6bUvigpRFqSwmPp1m2Y6Ky0d5.jpg",
+            "trailer_url": "https://www.youtube.com/embed/zAGVQLHvwOY",
+            "certification": "R",
+            "tagline": "Put on a happy face."
+        }
+    ]
+
+    for m in curated:
+        cursor.execute('''
+            INSERT INTO movies (
+                title, clean_title, year, genres, director, cast, overview,
+                vote_average, vote_count, runtime, poster_url, backdrop_url,
+                trailer_url, certification, tagline, is_custom
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+        ''', (
+            m["title"], m["clean_title"], m["year"], m["genres"], m["director"],
+            m["cast"], m["overview"], m["vote_average"], m["vote_count"], m["runtime"],
+            m["poster_url"], m["backdrop_url"], m["trailer_url"], m["certification"],
+            m["tagline"]
+        ))
+    
+    conn.commit()
+    print(f"Seeded {len(curated)} high-profile online & modern movie releases.")
+
+if __name__ == '__main__':
+    init_db()
+    print("Database initialized successfully at", DB_PATH)
