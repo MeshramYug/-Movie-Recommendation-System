@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CineMatch AI • Global Multilingual Movie Recommender (1900 - 2024)</title>
+    <title>CineMatch AI • Global Movie Recommender (1900 - 2024)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
@@ -100,7 +100,7 @@
             background: transparent;
             color: var(--text-secondary);
             border: none;
-            padding: 8px 18px;
+            padding: 8px 20px;
             border-radius: var(--radius-full);
             font-family: var(--font-main);
             font-size: 0.9rem;
@@ -324,7 +324,7 @@
             margin-right: 4px;
         }
 
-        .genre-chip, .lang-chip {
+        .genre-chip {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
             color: var(--text-secondary);
@@ -337,12 +337,12 @@
             transition: all 0.15s;
         }
 
-        .genre-chip:hover, .lang-chip:hover {
+        .genre-chip:hover {
             color: var(--text-primary);
             border-color: #475569;
         }
 
-        .genre-chip.active, .lang-chip.active {
+        .genre-chip.active {
             background: rgba(59, 130, 246, 0.2);
             color: #93C5FD;
             border-color: var(--accent-primary);
@@ -951,36 +951,6 @@
             from { transform: translateX(100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
         }
-
-        /* Stats Cards */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-            margin-bottom: 2rem;
-        }
-
-        .stat-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
-            padding: 20px;
-            text-align: center;
-        }
-
-        .stat-num {
-            font-family: var(--font-display);
-            font-size: 2.2rem;
-            font-weight: 800;
-            color: #60A5FA;
-        }
-
-        .stat-label {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            font-weight: 700;
-        }
     </style>
 </head>
 <body>
@@ -993,22 +963,19 @@
             </div>
             <div>
                 <div class="brand-title">CineMatch AI</div>
-                <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600; letter-spacing: 0.05em;">GLOBAL CINEMA REPOSITORY (1900 - 2024)</div>
+                <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600; letter-spacing: 0.05em;">MOVIE RECOMMENDATION SYSTEM (1900 - 2024)</div>
             </div>
         </div>
 
         <nav class="nav-tabs">
             <button class="nav-tab-btn active" id="tab-btn-discover" onclick="switchTab('discover')">
-                <i class="fa-solid fa-compass"></i> Discover Cinema
+                <i class="fa-solid fa-compass"></i> Discover Movies
             </button>
             <button class="nav-tab-btn" id="tab-btn-ai" onclick="switchTab('ai')">
                 <i class="fa-solid fa-wand-magic-sparkles"></i> AI Recommender
             </button>
             <button class="nav-tab-btn" id="tab-btn-watchlist" onclick="switchTab('watchlist')">
                 <i class="fa-solid fa-bookmark"></i> Watchlist
-            </button>
-            <button class="nav-tab-btn" id="tab-btn-stats" onclick="switchTab('stats')">
-                <i class="fa-solid fa-chart-pie"></i> Analytics & Languages
             </button>
         </nav>
 
@@ -1029,13 +996,13 @@
             <div class="hero-banner">
                 <div class="hero-content">
                     <div class="hero-tag">
-                        <i class="fa-solid fa-globe"></i> Vast Multilingual Cinema • 1900 to 2024
+                        <i class="fa-solid fa-film"></i> 1900 to 2024 Movie Catalog
                     </div>
-                    <h1 class="hero-title">Centuries of Cinema <span>Across All Languages</span></h1>
-                    <p class="hero-desc">Discover landmark films from French silent era (1902) to contemporary Hindi, Telugu, Tamil, Korean, Japanese, and Hollywood blockbusters (2024) with AI content similarity.</p>
+                    <h1 class="hero-title">Discover Your Next <span>Favorite Cinema</span></h1>
+                    <p class="hero-desc">Explore classic hits, Bollywood, Hollywood, and modern 2024 blockbusters with deep AI content similarity.</p>
                     <div class="hero-search-box">
                         <i class="fa-solid fa-magnifying-glass" style="color: var(--text-muted); margin-right: 10px;"></i>
-                        <input type="text" id="main-search-input" placeholder="Search by movie, director, actor, language, or genre (e.g. Sholay, Nolan, Hindi, 1957)..." onkeyup="handleSearch(event)">
+                        <input type="text" id="main-search-input" placeholder="Search by movie, director, actor, or genre (e.g. Sholay, Nolan, Sci-Fi, 1975)..." onkeyup="handleSearch(event)">
                         <button onclick="triggerSearch()">Search</button>
                     </div>
                 </div>
@@ -1043,16 +1010,7 @@
 
             <!-- Filter & Controls Bar -->
             <div class="controls-bar">
-                <!-- Row 1: Language Chips Filter -->
-                <div class="controls-row-top">
-                    <div class="filter-row-chips" id="lang-chips-container">
-                        <span class="chip-label"><i class="fa-solid fa-language"></i> Language:</span>
-                        <button class="lang-chip active" onclick="filterLanguage('All', this)">All Languages</button>
-                        <!-- Populated via JS -->
-                    </div>
-                </div>
-
-                <!-- Row 2: Genre Chips Filter -->
+                <!-- Genre Chips Filter -->
                 <div class="controls-row-top">
                     <div class="filter-row-chips" id="genre-chips-container">
                         <span class="chip-label"><i class="fa-solid fa-tags"></i> Genre:</span>
@@ -1061,7 +1019,7 @@
                     </div>
                 </div>
 
-                <!-- Row 3: Era Selector, Rating Slider, Sort Order -->
+                <!-- Era Selector, Rating Slider, Sort Order -->
                 <div class="controls-row-bottom">
                     <div class="filter-group">
                         <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Era / Decade:</span>
@@ -1105,8 +1063,8 @@
         <section id="tab-ai" class="tab-view">
             <div class="recommender-panel">
                 <div class="recommender-header">
-                    <h2><i class="fa-solid fa-wand-magic-sparkles" style="color: var(--accent-primary);"></i> Multilingual AI Recommendation Engine</h2>
-                    <p>Harness TF-IDF vector embeddings and Cosine Distance to uncover hidden gems across Indian and Global cinema with similar themes, directing signatures, and emotional arcs.</p>
+                    <h2><i class="fa-solid fa-wand-magic-sparkles" style="color: var(--accent-primary);"></i> AI Recommendation Engine</h2>
+                    <p>Harness TF-IDF vector embeddings and Cosine Distance to uncover movies with similar plots, directing signatures, and themes.</p>
                 </div>
 
                 <div class="recommender-grid-inputs">
@@ -1115,7 +1073,7 @@
                         <div class="input-card-title">
                             <i class="fa-solid fa-clapperboard"></i> 1. Select a Seed Movie (1900 - 2024)
                         </div>
-                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">Choose any classic, modern Hindi, South Indian, or world cinema title to find matches:</p>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">Choose any title from the catalog to find similar recommendations:</p>
                         <select class="form-select filter-select" style="width: 100%;" id="ai-movie-select">
                             <option value="">-- Choose a Movie --</option>
                             <!-- Populated from movies -->
@@ -1143,7 +1101,7 @@
                     <div style="display: flex; gap: 16px; align-items: center;">
                         <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600;">Algorithmic Blending:</span>
                         <label style="font-size: 0.82rem; color: var(--text-muted);">
-                            Multi-language Content Vectors (70%) + IMDb Quality Blending (30%)
+                            Content Similarity (70%) + IMDb Quality Blending (30%)
                         </label>
                     </div>
                     <div style="display: flex; gap: 10px;">
@@ -1186,49 +1144,6 @@
             </div>
         </section>
 
-        <!-- TAB 4: STATS & ANALYTICS -->
-        <section id="tab-stats" class="tab-view">
-            <div style="margin-bottom: 2rem;">
-                <h2 style="font-family: var(--font-display); font-size: 1.8rem; font-weight: 700;">
-                    <i class="fa-solid fa-chart-pie" style="color: #60A5FA;"></i> Vast Cinema Catalog Analytics
-                </h2>
-                <p style="color: var(--text-secondary);">Real-time statistics covering worldwide cinematic movements from 1900 to present.</p>
-            </div>
-
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-num" id="stat-total-movies">--</div>
-                    <div class="stat-label">Total Movies</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-num" id="stat-total-languages">--</div>
-                    <div class="stat-label">Languages Represented</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-num" id="stat-era-span">--</div>
-                    <div class="stat-label">Historical Era Span</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-num" id="stat-modern-movies">--</div>
-                    <div class="stat-label">2020s Current Titles</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-num" id="stat-avg-rating">--</div>
-                    <div class="stat-label">Average IMDb Score</div>
-                </div>
-            </div>
-
-            <!-- Top Genres Distribution -->
-            <div class="input-card" style="margin-top: 1.5rem;">
-                <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; color: #93C5FD;">
-                    <i class="fa-solid fa-tags"></i> Catalog Genre Breakdown
-                </h3>
-                <div id="genres-breakdown-list" style="display: flex; flex-wrap: wrap; gap: 10px;">
-                    <!-- Dynamically populated -->
-                </div>
-            </div>
-        </section>
-
     </main>
 
     <!-- MOVIE DETAIL & TRAILER MODAL -->
@@ -1262,7 +1177,6 @@
                         <span class="card-rating-badge" style="position: static;" id="modal-rating">
                             <i class="fa-solid fa-star"></i> 8.6
                         </span>
-                        <span class="genre-pill" id="modal-lang" style="background: rgba(59, 130, 246, 0.2); color: #93C5FD;">English</span>
                         <span class="genre-pill" id="modal-cert">PG-13</span>
                         <span style="font-size: 0.85rem; color: var(--text-secondary);" id="modal-year-runtime">2024 • 166 min</span>
                         <div id="modal-genres" style="display: flex; gap: 4px;"></div>
@@ -1306,15 +1220,14 @@
         // Global State
         let allMovies = [];
         let activeGenre = 'All';
-        let activeLanguage = 'All';
         let currentModalMovieId = null;
         let selectedMood = '';
 
         document.addEventListener('DOMContentLoaded', () => {
-            fetchFilters();
+            fetchGenres();
             fetchMovies();
-            fetchStats();
             loadAiSeedOptions();
+            updateWatchlistCounter();
         });
 
         function switchTab(tabId) {
@@ -1327,28 +1240,15 @@
             if (targetBtn) targetBtn.classList.add('active');
 
             if (tabId === 'watchlist') fetchWatchlist();
-            if (tabId === 'stats') fetchStats();
             if (tabId === 'ai') loadAiSeedOptions();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        async function fetchFilters() {
+        async function fetchGenres() {
             try {
                 const res = await fetch('/api/filters');
                 const data = await res.json();
                 
-                // Populate Language Chips
-                const langContainer = document.getElementById('lang-chips-container');
-                langContainer.innerHTML = '<span class="chip-label"><i class="fa-solid fa-language"></i> Language:</span><button class="lang-chip active" onclick="filterLanguage(\'All\', this)">All Languages</button>';
-                data.languages.forEach(l => {
-                    const btn = document.createElement('button');
-                    btn.className = 'lang-chip';
-                    btn.textContent = l;
-                    btn.onclick = () => filterLanguage(l, btn);
-                    langContainer.appendChild(btn);
-                });
-
-                // Populate Genre Chips
                 const genreContainer = document.getElementById('genre-chips-container');
                 genreContainer.innerHTML = '<span class="chip-label"><i class="fa-solid fa-tags"></i> Genre:</span><button class="genre-chip active" onclick="filterGenre(\'All\', this)">All Genres</button>';
                 data.genres.slice(0, 16).forEach(g => {
@@ -1359,15 +1259,8 @@
                     genreContainer.appendChild(btn);
                 });
             } catch (err) {
-                console.error("Error loading filters:", err);
+                console.error("Error loading genres:", err);
             }
-        }
-
-        function filterLanguage(lang, btnElem) {
-            activeLanguage = lang;
-            document.querySelectorAll('.lang-chip').forEach(b => b.classList.remove('active'));
-            btnElem.classList.add('active');
-            fetchMovies();
         }
 
         function filterGenre(genre, btnElem) {
@@ -1395,7 +1288,7 @@
             const sortBy = document.getElementById('filter-sort').value;
             const minRating = document.getElementById('filter-rating-slider').value;
 
-            let url = `/api/movies?q=${encodeURIComponent(query)}&genre=${encodeURIComponent(activeGenre)}&language=${encodeURIComponent(activeLanguage)}&decade=${encodeURIComponent(decade)}&sort_by=${sortBy}&min_rating=${minRating}&limit=100`;
+            let url = `/api/movies?q=${encodeURIComponent(query)}&genre=${encodeURIComponent(activeGenre)}&decade=${encodeURIComponent(decade)}&sort_by=${sortBy}&min_rating=${minRating}&limit=100`;
             
             try {
                 const res = await fetch(url);
@@ -1416,7 +1309,7 @@
                     <div style="grid-column: 1 / -1; text-align: center; padding: 4rem 1rem; color: var(--text-muted);">
                         <i class="fa-solid fa-film" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.4;"></i>
                         <h3 style="color: var(--text-secondary); font-size: 1.2rem;">No movies matched these filters</h3>
-                        <p>Try switching languages or eras to view more classic or modern titles!</p>
+                        <p>Try switching eras or clearing search to view more titles!</p>
                     </div>
                 `;
                 return;
@@ -1446,7 +1339,6 @@
                             <div class="card-rating-badge">
                                 <i class="fa-solid fa-star"></i> ${(m.vote_average || 7.0).toFixed(1)}
                             </div>
-                            <div class="card-lang-badge">${m.language || 'English'}</div>
                             ${matchBadge}
                             <button class="card-btn-watchlist ${inWatchlistClass}" title="Save to Watchlist" onclick="event.stopPropagation(); toggleWatchlist(${m.id}, this)">
                                 <i class="fa-solid fa-heart"></i>
@@ -1492,7 +1384,6 @@
                 document.getElementById('modal-title').textContent = movie.clean_title || movie.title;
                 document.getElementById('modal-tagline').textContent = movie.tagline ? `"${movie.tagline}"` : '';
                 document.getElementById('modal-rating').innerHTML = `<i class="fa-solid fa-star"></i> ${(movie.vote_average || 7.0).toFixed(1)} / 10`;
-                document.getElementById('modal-lang').textContent = `${movie.language || 'English'} Cinema`;
                 document.getElementById('modal-cert').textContent = movie.certification || 'PG-13';
                 document.getElementById('modal-year-runtime').textContent = `${movie.year || 2024} • ${movie.runtime || 120} min`;
                 document.getElementById('modal-overview').textContent = movie.overview || 'No overview available.';
@@ -1607,9 +1498,9 @@
 
         async function updateWatchlistCounter() {
             try {
-                const res = await fetch('/api/stats');
+                const res = await fetch('/api/watchlist');
                 const data = await res.json();
-                document.getElementById('header-watchlist-count').textContent = data.watchlist_count;
+                document.getElementById('header-watchlist-count').textContent = data.count || 0;
             } catch (e) {}
         }
 
@@ -1622,7 +1513,7 @@
                 data.movies.forEach(m => {
                     const opt = document.createElement('option');
                     opt.value = m.id;
-                    opt.textContent = `[${m.language}] ${m.clean_title || m.title} (${m.year}) - ★ ${(m.vote_average || 7.0).toFixed(1)}`;
+                    opt.textContent = `${m.clean_title || m.title} (${m.year}) - ★ ${(m.vote_average || 7.0).toFixed(1)}`;
                     select.appendChild(opt);
                 });
             } catch (err) {
@@ -1691,31 +1582,6 @@
                 document.getElementById('recommendations-count').textContent = `Curated from ${data.count} taste vectors`;
             } catch (err) {
                 console.error("Error recommending from watchlist:", err);
-            }
-        }
-
-        async function fetchStats() {
-            try {
-                const res = await fetch('/api/stats');
-                const data = await res.json();
-                document.getElementById('stat-total-movies').textContent = data.total_movies;
-                document.getElementById('stat-total-languages').textContent = data.total_languages;
-                document.getElementById('stat-era-span').textContent = data.era_span;
-                document.getElementById('stat-modern-movies').textContent = data.modern_movies;
-                document.getElementById('stat-avg-rating').textContent = `${data.avg_rating} / 10`;
-                document.getElementById('header-watchlist-count').textContent = data.watchlist_count;
-
-                const fRes = await fetch('/api/filters');
-                const fData = await fRes.json();
-                const gList = document.getElementById('genres-breakdown-list');
-                gList.innerHTML = fData.genres.map(g => `
-                    <div style="background: var(--bg-surface); border: 1px solid var(--border-color); padding: 6px 14px; border-radius: var(--radius-full); font-size: 0.85rem;">
-                        <span style="font-weight: 700; color: #93C5FD;">${g.name}</span>
-                        <span style="color: var(--text-muted); margin-left: 6px;">${g.count} titles</span>
-                    </div>
-                `).join('');
-            } catch (err) {
-                console.error("Error fetching stats:", err);
             }
         }
 
