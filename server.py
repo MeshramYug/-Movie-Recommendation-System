@@ -2,10 +2,10 @@
 Movie Recommendation System - Standalone Flask Server
 Port: 5001
 Features:
-- Full REST API for Movie Discovery & Recommendations
+- Vast Multilingual Catalog from 1900 to 2024 (English, Hindi, Telugu, Tamil, Japanese, Korean, Italian, French, etc.)
+- Multi-dimensional filters (Era/Decade, Language, Genre, IMDb Rating)
 - AI Similarity Engine with Cosine & Bayesian Hybrid Ranking
-- Live Add-Movie Studio for online & new releases
-- Watchlist & Ratings tracking with SQLite
+- Watchlist tracking with SQLite
 """
 
 import os
@@ -18,7 +18,6 @@ from recommender import recommender
 app = Flask(__name__)
 app.config['JSON_SORT_KEYS'] = False
 
-# Ensure database is initialized at startup
 init_db()
 
 @app.route('/')
@@ -29,10 +28,11 @@ def home():
 def get_movies():
     query = request.args.get('q', '').strip().lower()
     genre = request.args.get('genre', '').strip()
+    language = request.args.get('language', '').strip()
     decade = request.args.get('decade', '').strip()
     min_rating = float(request.args.get('min_rating', 0.0))
-    sort_by = request.args.get('sort_by', 'popular') # popular, rating, year_desc, title
-    limit = int(request.args.get('limit', 50))
+    sort_by = request.args.get('sort_by', 'popular')
+    limit = int(request.args.get('limit', 100))
 
     conn = get_db()
     cursor = conn.cursor()
@@ -41,27 +41,38 @@ def get_movies():
     params = [min_rating]
 
     if query:
-        sql += ' AND (LOWER(title) LIKE ? OR LOWER(director) LIKE ? OR LOWER(cast) LIKE ? OR LOWER(genres) LIKE ?)'
+        sql += ' AND (LOWER(title) LIKE ? OR LOWER(director) LIKE ? OR LOWER(cast) LIKE ? OR LOWER(genres) LIKE ? OR LOWER(language) LIKE ?)'
         wildcard = f'%{query}%'
-        params.extend([wildcard, wildcard, wildcard, wildcard])
+        params.extend([wildcard, wildcard, wildcard, wildcard, wildcard])
 
     if genre and genre != 'All':
         sql += ' AND genres LIKE ?'
         params.append(f'%{genre}%')
 
+    if language and language != 'All':
+        sql += ' AND LOWER(language) = LOWER(?)'
+        params.append(language)
+
     if decade and decade != 'All':
-        try:
-            start_year = int(decade.replace('s', ''))
-            end_year = start_year + 9
-            sql += ' AND year BETWEEN ? AND ?'
-            params.extend([start_year, end_year])
-        except ValueError:
-            pass
+        if decade == 'Classic (Pre-1960)':
+            sql += ' AND year < 1960'
+        elif decade == '1960s-1970s':
+            sql += ' AND year BETWEEN 1960 AND 1979'
+        elif decade == '1980s-1990s':
+            sql += ' AND year BETWEEN 1980 AND 1999'
+        elif decade == '2000s':
+            sql += ' AND year BETWEEN 2000 AND 2009'
+        elif decade == '2010s':
+            sql += ' AND year BETWEEN 2010 AND 2019'
+        elif decade == '2020s (Current)':
+            sql += ' AND year >= 2020'
 
     if sort_by == 'rating':
         sql += ' ORDER BY vote_average DESC, vote_count DESC'
     elif sort_by == 'year_desc':
         sql += ' ORDER BY year DESC, vote_average DESC'
+    elif sort_by == 'year_asc':
+        sql += ' ORDER BY year ASC, vote_average DESC'
     elif sort_by == 'title':
         sql += ' ORDER BY title ASC'
     else: # popular / default
@@ -73,7 +84,6 @@ def get_movies():
     cursor.execute(sql, params)
     movies = [dict(row) for row in cursor.fetchall()]
 
-    # Check watchlist status for each movie
     cursor.execute('SELECT movie_id FROM watchlist')
     watchlist_set = set(r['movie_id'] for r in cursor.fetchall())
     for m in movies:
@@ -97,7 +107,6 @@ def get_movie_detail(movie_id):
     movie['in_watchlist'] = bool(cursor.fetchone())
     conn.close()
 
-    # Fetch top 4 recommendations for this movie
     movie['similar_movies'] = recommender.get_recommendations_for_movie(movie_id, top_n=4)
     return jsonify(movie)
 
@@ -107,13 +116,9 @@ def get_recommendations():
     mood = request.args.get('mood', '').strip()
     from_watchlist = request.args.get('from_watchlist', 'false').lower() == 'true'
     top_n = int(request.args.get('top_n', 8))
-    genre_weight = float(request.args.get('genre_weight', 0.6))
-    rating_weight = float(request.args.get('rating_weight', 0.4))
 
     if movie_id:
-        results = recommender.get_recommendations_for_movie(
-            movie_id, top_n=top_n, genre_weight=genre_weight, rating_weight=rating_weight
-        )
+        results = recommender.get_recommendations_for_movie(movie_id, top_n=top_n)
     elif mood:
         results = recommender.get_recommendations_by_mood(mood, top_n=top_n)
     elif from_watchlist:
@@ -121,7 +126,6 @@ def get_recommendations():
     else:
         results = recommender.get_top_rated(top_n=top_n)
 
-    # Attach in_watchlist status
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute('SELECT movie_id FROM watchlist')
@@ -132,76 +136,6 @@ def get_recommendations():
         r['in_watchlist'] = (r['id'] in watchlist_set)
 
     return jsonify({"count": len(results), "recommendations": results})
-
-@app.route('/api/movies/add', methods=['POST'])
-def add_new_movie():
-    """Allows user to input new online and current movies directly into the live catalog."""
-    data = request.get_json() or request.form.to_dict()
-    
-    title = data.get('title', '').strip()
-    if not title:
-        return jsonify({"error": "Movie title is required"}), 400
-
-    # Auto extract year if present in title
-    year = data.get('year')
-    if not year:
-        match = re.search(r'\((\d{4})\)', title)
-        year = int(match.group(1)) if match else 2024
-    else:
-        try:
-            year = int(year)
-        except ValueError:
-            year = 2024
-
-    clean_title = re.sub(r'\s*\(\d{4}\)\s*$', '', title).strip()
-    formatted_title = f"{clean_title} ({year})"
-
-    genres = data.get('genres', 'Drama, Thriller').strip()
-    director = data.get('director', 'Independent Director').strip()
-    cast = data.get('cast', 'Leading Cast').strip()
-    overview = data.get('overview', 'A gripping cinematic story.').strip()
-    
-    try:
-        vote_average = float(data.get('vote_average', 7.5))
-    except (ValueError, TypeError):
-        vote_average = 7.5
-
-    try:
-        runtime = int(data.get('runtime', 120))
-    except (ValueError, TypeError):
-        runtime = 120
-
-    poster_url = data.get('poster_url', '').strip() or 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=500&auto=format&fit=crop'
-    backdrop_url = data.get('backdrop_url', '').strip() or 'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=1280&auto=format&fit=crop'
-    trailer_url = data.get('trailer_url', '').strip()
-    certification = data.get('certification', 'PG-13').strip()
-    tagline = data.get('tagline', '').strip()
-
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute('''
-        INSERT INTO movies (
-            title, clean_title, year, genres, director, cast, overview,
-            vote_average, vote_count, runtime, poster_url, backdrop_url,
-            trailer_url, certification, tagline, is_custom
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-    ''', (
-        formatted_title, clean_title, year, genres, director, cast, overview,
-        vote_average, 1500, runtime, poster_url, backdrop_url,
-        trailer_url, certification, tagline
-    ))
-    new_id = cursor.lastrowid
-    conn.commit()
-    conn.close()
-
-    # Re-index recommender with newly added movie
-    recommender.refresh()
-
-    return jsonify({
-        "success": True,
-        "message": f"Successfully added '{formatted_title}' to live catalog and recommendation engine!",
-        "movie_id": new_id
-    }), 201
 
 @app.route('/api/watchlist/toggle', methods=['POST'])
 def toggle_watchlist():
@@ -245,10 +179,14 @@ def get_watchlist():
     conn.close()
     return jsonify({"count": len(movies), "watchlist": movies})
 
-@app.route('/api/genres', methods=['GET'])
-def get_genres():
+@app.route('/api/filters', methods=['GET'])
+def get_filters():
     conn = get_db()
     cursor = conn.cursor()
+
+    cursor.execute('SELECT DISTINCT language FROM movies WHERE language IS NOT NULL ORDER BY language ASC')
+    languages = [r['language'] for r in cursor.fetchall()]
+
     cursor.execute('SELECT genres FROM movies')
     rows = cursor.fetchall()
     conn.close()
@@ -263,7 +201,11 @@ def get_genres():
                 genre_counts[p] = genre_counts.get(p, 0) + 1
 
     sorted_genres = sorted(genre_counts.items(), key=lambda x: x[1], reverse=True)
-    return jsonify({"genres": [{"name": g[0], "count": g[1]} for g in sorted_genres]})
+
+    return jsonify({
+        "languages": languages,
+        "genres": [{"name": g[0], "count": g[1]} for g in sorted_genres]
+    })
 
 @app.route('/api/stats', methods=['GET'])
 def get_stats():
@@ -273,11 +215,14 @@ def get_stats():
     cursor.execute('SELECT COUNT(*) FROM movies')
     total_movies = cursor.fetchone()[0]
 
+    cursor.execute('SELECT COUNT(DISTINCT language) FROM movies')
+    total_languages = cursor.fetchone()[0]
+
+    cursor.execute('SELECT MIN(year), MAX(year) FROM movies')
+    min_year, max_year = cursor.fetchone()
+
     cursor.execute('SELECT COUNT(*) FROM movies WHERE year >= 2020')
     modern_movies = cursor.fetchone()[0]
-
-    cursor.execute('SELECT COUNT(*) FROM movies WHERE is_custom = 1')
-    custom_movies = cursor.fetchone()[0]
 
     cursor.execute('SELECT COUNT(*) FROM watchlist')
     watchlist_count = cursor.fetchone()[0]
@@ -289,8 +234,9 @@ def get_stats():
 
     return jsonify({
         "total_movies": total_movies,
+        "total_languages": total_languages,
+        "era_span": f"{min_year} - {max_year}",
         "modern_movies": modern_movies,
-        "custom_movies": custom_movies,
         "watchlist_count": watchlist_count,
         "avg_rating": avg_rating
     })
@@ -298,8 +244,7 @@ def get_stats():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
     print("=" * 60)
-    print(f"🎬 Movie Recommendation System Local Server")
+    print(f"🎬 Movie Recommendation System (1900 - 2024)")
     print(f"📡 Running locally at: http://127.0.0.1:{port}")
-    print(f"💡 Press Ctrl+C in terminal to stop server")
     print("=" * 60)
     app.run(host='127.0.0.1', port=port, debug=True)
